@@ -1,0 +1,76 @@
+version: '3.7'
+services:
+  rabbit1:
+    image: "davincievans:rabbitmq-mqtt-cluster-3.12"
+    # ports:
+    #   - 15672:15672
+    #   - 5672:5672
+    #   - 1883:1883
+    #   - 15675:15675
+    hostname: rabbit1
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "unique_cookie"
+      RABBITMQ_DEFAULT_USER: "admin"
+      RABBITMQ_DEFAULT_PASS: "password"
+      MIRROR_QUEUE: true
+    networks:
+      - rabbitmq-network
+
+  rabbit2:
+    image: "davincievans:rabbitmq-mqtt-cluster-3.12"
+    # ports:
+    #   - "5673:5672"
+    #   - "15673:15672"
+    #   - "1884:1883"
+    hostname: rabbit2
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "unique_cookie"
+      RABBITMQ_DEFAULT_USER: "admin"
+      RABBITMQ_DEFAULT_PASS: "password"
+      CLUSTER_WITH: rabbit1
+      RAM_NODE: true
+      MIRROR_QUEUE: true
+    networks:
+      - rabbitmq-network
+    depends_on:
+      - rabbit1
+
+  rabbit3:
+    image: "davincievans:rabbitmq-mqtt-cluster-3.12"
+    # ports:
+    #   - "5674:5672"
+    #   - "15674:15672"
+    #   - "1885:1883"
+    hostname: rabbit3
+    environment:
+      RABBITMQ_ERLANG_COOKIE: "unique_cookie"
+      RABBITMQ_DEFAULT_USER: "admin"
+      RABBITMQ_DEFAULT_PASS: "password"
+      CLUSTER_WITH: rabbit1
+      MIRROR_QUEUE: true
+    networks:
+      - rabbitmq-network
+    depends_on:
+      - rabbit1
+
+   
+  haproxy:
+    image: haproxy:alpine
+    restart: on-failure
+    volumes:
+      - ./haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      - rabbit1
+      - rabbit2
+      - rabbit3
+    ports:
+      - 15672:15672
+      - 5672:5672
+      - 1883:1883
+      - 15675:15675
+    networks:
+      - rabbitmq-network
+
+networks:
+  rabbitmq-network:
+    driver: bridge
